@@ -1,4 +1,4 @@
-<title>Voxel Meadow</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body><title>Voxel Meadow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -16,6 +16,8 @@
   --font-display: 'Pixelify Sans', ui-monospace, Menlo, Consolas, monospace;
   color-scheme: dark;
 }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-display);
@@ -1591,7 +1593,10 @@ button { font-family: var(--font-display); color: var(--ink); }
     else if (k >= '1' && k <= '9') select(+k - 1);
     else if (k === 'e' && started) { if (bagOpen) closeBag(); else openBag(); }
     else if (k === 't' && started && !bagOpen && net.role !== 'single') { e.preventDefault(); openChat(); }
-    else if (k === 'escape' && bagOpen) closeBag();
+    else if (k === 'escape') {
+      if (bagOpen) closeBag();
+      else if (started && !locked) showMenu('Resume'); /* no mouse lock held: Esc still opens the menu */
+    }
   });
   window.addEventListener('keyup', function (e) {
     var k = e.key.toLowerCase();
@@ -1623,7 +1628,11 @@ button { font-family: var(--font-display); color: var(--ink); }
   app.addEventListener('pointerdown', function (e) {
     if (!started || bagOpen) return;
     if (e.pointerType === 'mouse') {
-      if (!locked && !lockFailed) { requestLock(); return; }
+      if (!locked) {
+        /* a lock request can fail for a moment right after Esc; every click tries again */
+        var wasFailed = lockFailed; lockFailed = false; requestLock();
+        if (!wasFailed) return;
+      }
       if (e.button === 0) breakHeld = true;
       else if (e.button === 2) doPlace();
       return;
@@ -2478,7 +2487,10 @@ button { font-family: var(--font-display); color: var(--ink); }
     setScreen('game'); $('chatbtn').hidden = net.role === 'single';
     started = true; last = performance.now();
     var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    if (fine && !lockFailed) requestLock();
+    if (fine) {
+      lockFailed = false; requestLock();
+      setTimeout(function () { if (started && !locked && !bagOpen && !chatOpen) { lockFailed = false; requestLock(); } }, 1400);
+    }
   }
   function goTitle() {
     started = false; breakHeld = false; jumpHeld = false; downHeld = false; stick.x = stick.y = 0;
@@ -2608,3 +2620,4 @@ button { font-family: var(--font-display); color: var(--ink); }
   requestAnimationFrame(frame);
 })();
 </script>
+</body></html>
